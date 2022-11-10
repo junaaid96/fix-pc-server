@@ -3,6 +3,7 @@ const cors = require("cors");
 const app = express();
 const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion } = require("mongodb");
+const ObjectId = require("mongodb").ObjectId;
 
 app.use(cors());
 app.use(express.json());
@@ -16,20 +17,31 @@ const client = new MongoClient(uri, {
     serverApi: ServerApiVersion.v1,
 });
 
-async function run(){
-    try{
+async function run() {
+    try {
         const database = client.db("fixPC").collection("services");
-        const query = {};
-        const cursor = await database.find(query);
 
-        
-    }
-    finally{
+        app.get("/services", async (req, res) => {
+            const query = {};
+            const cursor = database.find(query);
+            const services = await cursor.toArray();
+
+            res.send(services);
+        });
+
+        app.get("/services/:id", async (req, res) => {
+            const query = { _id: ObjectId(req.params.id) };
+            // console.log(query);
+            const service = await database.findOne(query);
+
+            res.send(service);
+        });
+    } finally {
         //nothing
     }
 }
 
-run().catch(error => console.error(error));
+run().catch((error) => console.error(error));
 
 app.get("/", (req, res) => {
     res.send("FixPC Server is running...");
