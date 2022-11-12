@@ -37,7 +37,6 @@ async function run() {
 
         app.get("/services/:id", async (req, res) => {
             const query = { _id: ObjectId(req.params.id) };
-            // console.log(query);
             const service = await servicesCollection.findOne(query);
 
             res.send(service);
@@ -52,6 +51,14 @@ async function run() {
             const reviews = await cursor.toArray();
 
             res.send(reviews);
+        });
+
+        app.get("/reviews/:id", async (req, res) => {
+            const query = { service_id: req.params.id };
+            const cursor = reviewsCollection.find(query);
+            const review = await cursor.toArray();
+
+            res.send(review);
         });
 
         app.post("/reviews", async (req, res) => {
