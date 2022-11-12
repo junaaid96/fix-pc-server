@@ -50,12 +50,27 @@ async function run() {
             res.send(reviews);
         });
 
+        //filtering all reviews by service id (will show only reviews for that service)
         app.get("/reviews/:id", async (req, res) => {
             const query = { service_id: req.params.id };
             const cursor = reviewsCollection.find(query);
             const review = await cursor.toArray();
 
             res.send(review);
+        });
+
+        app.get("/reviews/:id", async (req, res) => {
+            const query = { _id: ObjectId(req.params.id) };
+            const review = await reviewsCollection.findOne(query);
+
+            res.send(review);
+        });
+
+        app.delete("/reviews/:id", async (req, res) => {
+            const query = { _id: ObjectId(req.params.id) };
+            const result = await reviewsCollection.deleteOne(query);
+
+            res.send(result);
         });
 
         app.post("/reviews", async (req, res) => {
