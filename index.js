@@ -4,6 +4,9 @@ const app = express();
 const port = process.env.PORT || 5000;
 const { MongoClient, ServerApiVersion } = require("mongodb");
 const ObjectId = require("mongodb").ObjectId;
+const jwt = require("jsonwebtoken");
+
+// const token = jwt.sign({ _id }, process.env.ACCESS_TOKEN_SECRET);
 
 app.use(cors());
 app.use(express.json());
@@ -17,10 +20,37 @@ const client = new MongoClient(uri, {
     serverApi: ServerApiVersion.v1,
 });
 
+//custom middleware
+const verifyJWT = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    const token = authHeader.split(" ")[1];
+    if (!authHeader) {
+        return res.status(401).send({
+            message: "We need a token, please give it to us next time",
+        });
+    }
+    jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(401).send({
+                message: "We failed to authenticate",
+            });
+        }
+        req.decoded = decoded;
+        next();
+    });
+};
+
 async function run() {
     try {
         const servicesCollection = client.db("fixPC").collection("services");
         const reviewsCollection = client.db("fixPC").collection("reviews");
+
+        app.post("/jwt", (req, res) => {
+            const token = jwt.sign(req.body, process.env.ACCESS_TOKEN_SECRET, {
+                expiresIn: "1h",
+            });
+            res.send({ token }); //converting token to object
+        });
 
         app.get("/home", async (req, res) => {
             const limitCursor = servicesCollection.find({}).limit(3);
@@ -42,7 +72,15 @@ async function run() {
             res.send(service);
         });
 
-        app.get("/reviews", async (req, res) => {
+        app.get("/reviews", verifyJWT, async (req, res) => {
+            const decoded = req.decoded;
+            if (decoded.email !== req.query.email) {
+                return res.status(403).send({
+                    message:
+                        "We failed to authenticate (you are not that person)",
+                });
+            }
+
             const query = { email: req.query.email };
             const cursor = reviewsCollection.find(query);
             const reviews = await cursor.toArray();
